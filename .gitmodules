@@ -1,6 +1,3 @@
-[submodule "external"]
-	path = external
-	url = https://github.com/caelan/pybullet-planning.git
 [submodule "external/pybullet_planning"]
 	path = external/pybullet_planning
 	url = https://github.com/caelan/pybullet-planning.git
