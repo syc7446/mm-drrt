@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<robot name="walls">
+  <!--Room 0-->
+  <link name="wall_link0">
+    <visual>
+      <origin xyz="3 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.2 6 1" />
+      </geometry>
+      <material name="desert sand">
+        <color rgba="0.9297 0.7930 0.6758 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="3 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.2 6 1" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint01" type="fixed">
+    <parent link="wall_link0"/>
+    <child link="wall_link1"/>
+    <origin xyz="0 0 0"/>
+  </joint>
+  <link name="wall_link1">
+    <visual>
+      <origin xyz="-3 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.2 6 1" />
+      </geometry>
+      <material name="desert sand">
+        <color rgba="0.9297 0.7930 0.6758 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-3 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.2 6 1" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint12" type="fixed">
+    <parent link="wall_link1"/>
+    <child link="wall_link2"/>
+    <origin xyz="0 0 0"/>
+  </joint>
+  <link name="wall_link2">
+    <visual>
+      <origin xyz="0 -3 0" rpy="0 0 0" />
+      <geometry>
+        <box size="6 0.2 1" />
+      </geometry>
+      <material name="desert sand">
+        <color rgba="0.9297 0.7930 0.6758 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 -3 0" rpy="0 0 0" />
+      <geometry>
+        <box size="6 0.2 1" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint03" type="fixed">
+    <parent link="wall_link0"/>
+    <child link="wall_link3"/>
+    <origin xyz="0 0 0"/>
+  </joint>
+  <link name="wall_link3">
+    <visual>
+      <origin xyz="0 3 0" rpy="0 0 0" />
+      <geometry>
+        <box size="6 0.2 1" />
+      </geometry>
+      <material name="desert sand">
+        <color rgba="0.9297 0.7930 0.6758 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 3 0" rpy="0 0 0" />
+      <geometry>
+        <box size="6 0.2 1" />
+      </geometry>
+    </collision>
+  </link>
+</robot>
