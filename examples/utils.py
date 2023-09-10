@@ -14,14 +14,14 @@ from external.pybullet_planning.pybullet_tools.ikfast.pr2.ik import is_ik_compil
 from external.pybullet_planning.pybullet_tools.pr2_primitives import create_trajectory, iterate_approach_path, \
     Commands, State, SELF_COLLISIONS, Pose, Conf
 from external.pybullet_planning.pybullet_tools.pr2_utils import get_gripper_link, get_arm_joints, arm_conf, open_arm, \
-    get_aabb, get_disabled_collisions, get_group_joints, learned_pose_generator, PR2_GROUPS
+    get_aabb, get_disabled_collisions, get_group_joints, learned_pose_generator, PR2_GROUPS, set_group_conf
 from external.pybullet_planning.pybullet_tools.utils import is_placement, multiply, invert, set_joint_positions, \
     pairwise_collision, get_joint_positions, plan_direct_joint_motion, plan_joint_motion, joint_from_name, all_between, \
     BodySaver, LockRenderer, get_bodies, get_joint_limits, set_joint_limits, get_default_resolution, uniform_pose_generator, \
     Saver, PoseSaver, ConfSaver, get_configuration, remove_body, inverse_kinematics_helper, get_movable_joints, \
     get_link_pose, is_pose_close, elapsed_time, irange, create_sub_robot, get_custom_limits, sub_inverse_kinematics, INF, \
     get_box_geometry, create_shape, create_body, sample_placement, get_pose, get_euler, STATIC_MASS, RED, BROWN, join_paths, \
-    get_parent_dir, get_extend_fn, get_collision_fn, MAX_DISTANCE
+    get_parent_dir, get_extend_fn, get_collision_fn, MAX_DISTANCE, HideOutput, load_model
 from external.pybullet_planning.motion.motion_planners.utils import default_selector
 
 
@@ -32,7 +32,14 @@ ROOMS = join_paths(MODEL_DIRECTORY, 'rooms.urdf')
 SINGLE_ROOM = join_paths(MODEL_DIRECTORY, 'single_room.urdf')
 SINGLE_BIG_ROOM = join_paths(MODEL_DIRECTORY, 'single_big_room.urdf')
 SINGLE_SMALL_ROOM = join_paths(MODEL_DIRECTORY, 'single_small_room.urdf')
+TWO_ROOMS = join_paths(MODEL_DIRECTORY, 'two_rooms.urdf')
+TWO_ROOMS_CONNECTED = join_paths(MODEL_DIRECTORY, 'two_rooms_connected.urdf')
 NARROW_TABLE = join_paths(MODEL_DIRECTORY, 'narrow_table.urdf')
+SHELF = join_paths(MODEL_DIRECTORY, 'shelf.urdf')
+TABLE = join_paths(MODEL_DIRECTORY, 'table.urdf')
+PR2_0 = join_paths(MODEL_DIRECTORY, 'pr2_description_0/urdf/pr2_simplified.urdf')
+PR2_1 = join_paths(MODEL_DIRECTORY, 'pr2_description_1/urdf/pr2_simplified.urdf')
+PR2_2 = join_paths(MODEL_DIRECTORY, 'pr2_description_2/urdf/pr2_simplified.urdf')
 
 
 # Table
@@ -102,6 +109,21 @@ def create_shelf(w, l, h, set_point, sim_id):
         linkJointTypes=[p.JOINT_FIXED for _ in link_pos],
         linkJointAxis=[[0, 0, 0] for _ in link_pos],
         physicsClientId=sim_id)
+
+
+def create_pr2(robot, fixed_base=True, torso=0.2):
+    with LockRenderer():
+        with HideOutput():
+            if robot == 0:
+                pr2 = load_model(PR2_0, fixed_base=fixed_base)
+            elif robot == 1:
+                pr2 = load_model(PR2_1, fixed_base=fixed_base)
+            elif robot == 2:
+                pr2 = load_model(PR2_2, fixed_base=fixed_base)
+            elif robot == 3:
+                pr2 = load_model(PR2_1, fixed_base=fixed_base)
+        set_group_conf(pr2, 'torso', [torso])
+    return pr2
 
 
 def create_shelf_placement(w, l, h, mass=STATIC_MASS, color=RED, **kwargs):

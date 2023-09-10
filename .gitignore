@@ -1,2 +1,8 @@
 venv/
 .idea/
+data_*
+*/__pycache__/
+*/*/__pycache__/
+experiments/run_*
+test_multirobot_t2
+*.mp4
