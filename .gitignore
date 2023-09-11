@@ -1,6 +1,7 @@
 venv/
 .idea/
-data_*
+data_sm*
+data_mm*
 */__pycache__/
 */*/__pycache__/
 experiments/run_*
