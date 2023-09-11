@@ -18,13 +18,13 @@ Make sure to comment out "get_gripper" in pick_place_env.py; otherwise, the init
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--load_file', type=str, required=True, help="file path and name")
-parser.add_argument('--env_type', type=str, default='cleaning')    # options: pickplace, handover, cleaning
+parser.add_argument('--env_type', type=str, default='pickplace')    # options: pickplace, handover, cleaning
 
-opt = parser.parse_args()
-print(opt)
+fopt = parser.parse_args()
+print(fopt)
 
 path = join_paths(get_parent_dir(__file__), os.pardir, '.')
-dbfile = open(path+'/experiments/'+opt.load_file, 'rb')
+dbfile = open(path+'/experiments/'+fopt.load_file, 'rb')
 db = pickle.load(dbfile)
 
 composite_path = db['composite_path']
@@ -32,15 +32,15 @@ opt = db['opt']
 
 sim_id = connect(use_gui=True)
 disable_real_time()
-if opt.env_type == 'pickplace':
+if fopt.env_type == 'pickplace':
     set_camera_pose(camera_point=PickPlaceCameraSetup[0], target_point=PickPlaceCameraSetup[1])
     env = PickPlaceEnvironment(num_robots=opt.num_robots, num_objs=opt.num_objs, arm=opt.arm,
                                grasp_type=opt.grasp_type, sim_id=sim_id, seed=opt.seed)
-elif opt.env_type == 'handover':
+elif fopt.env_type == 'handover':
     set_camera_pose(camera_point=ObjectHandoverCameraSetup[0], target_point=ObjectHandoverCameraSetup[1])
     env = ObjectHandoverEnvironment(num_robots=opt.num_robots, num_objs=opt.num_objs, arm=opt.arm,
                                     grasp_type=opt.grasp_type, sim_id=sim_id, seed=opt.seed)
-elif opt.env_type == 'cleaning':
+elif fopt.env_type == 'cleaning':
     set_camera_pose(camera_point=ObjectCleaningCameraSetup[0], target_point=ObjectCleaningCameraSetup[1])
     env = ObjectCleaningEnvironment(num_robots=opt.num_robots, num_objs=opt.num_objs, arm=opt.arm,
                                     grasp_type=opt.grasp_type, sim_id=sim_id, seed=opt.seed)

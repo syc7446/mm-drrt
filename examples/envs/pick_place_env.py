@@ -256,19 +256,34 @@ class PickPlaceEnvironment(Environment):
                                 actions[obj_orders[id - 1]].goal['place'].assign()
 
     def create_plan_order_constraints(self):
-        plan = {'a0': ('transit', self.robots[0], self.m_objs[0], None, self.f_objs[0]),
-                'a1': ('transfer', self.robots[0], self.m_objs[0], self.f_objs[0], self.f_objs[1]),
-                'a2': ('transit', self.robots[0], self.m_objs[1], self.f_objs[1], self.f_objs[1]),
-                'a3': ('transfer', self.robots[0], self.m_objs[1], self.f_objs[1], self.f_objs[0]),
-                'a4': ('transit', self.robots[1], self.m_objs[1], None, self.f_objs[0]),
-                'a5': ('transfer', self.robots[1], self.m_objs[1], self.f_objs[0], self.f_objs[1]),
-                'a6': ('transit', self.robots[1], self.m_objs[0], self.f_objs[1], self.f_objs[1]),
-                'a7': ('transfer', self.robots[1], self.m_objs[0], self.f_objs[1], self.f_objs[0])}
-        action_orders = {self.robots[0]: ('a0', 'a1', 'a2', 'a3'),
-                         self.robots[1]: ('a4', 'a5', 'a6', 'a7')}
-        obj_orders = {self.m_objs[0]: ['a1', 'a7'],
-                      self.m_objs[1]: ['a5', 'a3']}
-        init_order_constraints = ({'pre': 'a5', 'post': 'a2'}, {'pre': 'a1', 'post': 'a6'})
+        if self._num_robots == 1:
+            # plan = {'a0': ('transit', self.robots[0], self.m_objs[0], None, self.f_objs[0]),
+            #         'a1': ('transfer', self.robots[0], self.m_objs[0], self.f_objs[0], self.f_objs[1]),
+            #         'a2': ('transit', self.robots[0], self.m_objs[1], self.f_objs[1], self.f_objs[0]),
+            #         'a3': ('transfer', self.robots[0], self.m_objs[1], self.f_objs[0], self.f_objs[1])}
+            # action_orders = {self.robots[0]: ('a0', 'a1', 'a2', 'a3')}
+            # obj_orders = {self.m_objs[0]: ['a1'],
+            #               self.m_objs[1]: ['a3']}
+            # init_order_constraints = ()
+            plan = {'a0': ('transit', self.robots[0], self.m_objs[0], None, self.f_objs[0]),
+                    'a1': ('transfer', self.robots[0], self.m_objs[0], self.f_objs[0], self.f_objs[1])}
+            action_orders = {self.robots[0]: ('a0', 'a1')}
+            obj_orders = {self.m_objs[0]: ['a1']}
+            init_order_constraints = ()
+        elif self._num_robots == 2:
+            plan = {'a0': ('transit', self.robots[0], self.m_objs[0], None, self.f_objs[0]),
+                    'a1': ('transfer', self.robots[0], self.m_objs[0], self.f_objs[0], self.f_objs[1]),
+                    'a2': ('transit', self.robots[0], self.m_objs[1], self.f_objs[1], self.f_objs[1]),
+                    'a3': ('transfer', self.robots[0], self.m_objs[1], self.f_objs[1], self.f_objs[0]),
+                    'a4': ('transit', self.robots[1], self.m_objs[1], None, self.f_objs[0]),
+                    'a5': ('transfer', self.robots[1], self.m_objs[1], self.f_objs[0], self.f_objs[1]),
+                    'a6': ('transit', self.robots[1], self.m_objs[0], self.f_objs[1], self.f_objs[1]),
+                    'a7': ('transfer', self.robots[1], self.m_objs[0], self.f_objs[1], self.f_objs[0])}
+            action_orders = {self.robots[0]: ('a0', 'a1', 'a2', 'a3'),
+                             self.robots[1]: ('a4', 'a5', 'a6', 'a7')}
+            obj_orders = {self.m_objs[0]: ['a1', 'a7'],
+                          self.m_objs[1]: ['a5', 'a3']}
+            init_order_constraints = ({'pre': 'a5', 'post': 'a2'}, {'pre': 'a1', 'post': 'a6'})
         return plan, action_orders, obj_orders, init_order_constraints
 
     def _create_problem(self):
