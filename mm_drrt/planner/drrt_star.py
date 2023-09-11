@@ -129,16 +129,17 @@ class dRRTStar:
                         if use_debug_verbal: print('Some of robots reached their subgoals.')
                         sub_q_last, sub_goals = update_subprob_id(q_new, sub_goals, self.subprob_id,
                                                                   self.goals, self.joint_dim, self.roadmaps)
-                        print('subprob_id', self.subprob_id)
+                        # print('subprob_id', self.subprob_id)
                         # print(self.subprob_id, len(self.nodes), time.time() - start)
                         start = time.time()
                         is_update_subprob_id = True
 
                     if use_debug_verbal: print('New node is added to the tree.')
+                    # remember that the local path is the path reaching to the current node
                     self.nodes.append(OptimalNode(q_new, num_robots=self.num_robots, d=local_dist,
                                                   parent=get_node_from_tree(self.nodes, q_best, subprob_id),
                                                   subprob_id=self.subprob_id, path=local_paths,
-                                                  attachments=get_subattachments(self.roadmaps, self.subprob_id)))
+                                                  attachments=get_subattachments(self.roadmaps, self.subprob_id, self.nodes)))
 
                     # TODO: currently best path can be computed only when the final goals are reached. we do not consider optimality yet.
                     if is_goal_in_tree(self.nodes, get_goals(self.goals, self.joint_dim), self.roadmaps, self.subprob_id):
@@ -211,11 +212,11 @@ class dRRTStar:
                         if use_temp_debug: print('node_pose', node_pose)
                         sub_q_last, sub_goals = update_subprob_id(get_substarts_subgoals(self.goals, self.subprob_id, self.joint_dim),
                                                                   sub_goals, self.subprob_id, self.goals, self.joint_dim, self.roadmaps)
-                        print('subprob_id', self.subprob_id)
+                        # print('subprob_id', self.subprob_id)
                         self.nodes.append(OptimalNode(node_pose, num_robots=self.num_robots, d=dist_to_goal,
                                                       parent=self.nodes[parent_node_index],
                                                       subprob_id=self.subprob_id, path=local_paths,
-                                                      attachments=get_subattachments(self.roadmaps, self.subprob_id)))
+                                                      attachments=get_subattachments(self.roadmaps, self.subprob_id, self.nodes)))
                         if use_temp_debug: print(self.subprob_id, len(self.nodes), time.time() - start)
 
                         # TODO: currently best path can be computed only when the final goals are reached. we do not consider optimality yet.

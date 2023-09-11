@@ -944,11 +944,16 @@ def get_subprob(array, subprob_id):
     return sub_array
 
 
-def get_subattachments(array, subprob_id):
+def get_subattachments(array, subprob_id, nodes):
+    # remember that the local path is the path reaching to the current node, so attachment must use the previous node information
     sub_array = [None for _ in range(len(array))]
     for i in range(len(array)):
-        if array[i][subprob_id[i]].attachments:
-            sub_array[i] = array[i][subprob_id[i]].attachments
+        if nodes[-1].subprob_id[i] == subprob_id[i]:
+            if array[i][subprob_id[i]].attachments:
+                sub_array[i] = array[i][subprob_id[i]].attachments
+        else:
+            if nodes[-1].attachments[i]:
+                sub_array[i] = nodes[-1].attachments[i]
     return sub_array
 
 
