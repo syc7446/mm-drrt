@@ -497,7 +497,6 @@ def is_local_collision(paths, drrt_collision_fn=None):
             if i >= len(paths[r]): configs.append(paths[r][-1])
             else: configs.append(paths[r][i])
         if drrt_collision_fn(configs, mode='boolean'):
-            # print('local_collision occurs')
             return True
     return False
 
@@ -866,7 +865,6 @@ def get_q_best(nodes, roadmaps, num_robots, drrt_collision_fn, neighbor_nodes, q
                                 start_configs=get_sub_q_list(n, num_robots),
                                 target_configs=get_sub_q_list(q_new, num_robots))
         if is_local_collision(paths, drrt_collision_fn): continue
-        # print('no local collision')
         node = get_node_from_tree(nodes, n, subprob_id)
         dist = compute_local_dist(roadmaps, n, q_new)
         if dist + node.cost < min_dist:

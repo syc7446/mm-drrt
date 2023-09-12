@@ -47,7 +47,6 @@ class dRRTStar:
     def grow(self, num_iters=10, start_time=0., time_limit=math.inf, use_debug_plot=False,
              use_debug_verbal=False, debug_robot_id=0):
         use_debug_verbal = False
-        use_temp_debug = False
         best_paths = []
         best_path_cost = float('inf')
         sub_q_last = get_sub_q_list(get_substarts_subgoals(self.starts, self.subprob_id, self.joint_dim), self.num_robots)
@@ -55,18 +54,11 @@ class dRRTStar:
         is_found_path = False
 
         while time.time() < start_time + time_limit:
-            if use_temp_debug:
-                print(' ')
-                print(' ')
             start = time.time()
             if is_found_path: break
             if use_debug_verbal: print('New loop starts. Time taken so far: %.2fs' % (time.time() - start_time))
             for i in range(num_iters):
                 if is_found_path: break
-                if use_temp_debug:
-                    print(' ')
-                    print('new iteration starts')
-                    print('subprob_id', self.subprob_id)
                 if self.subprob_id == [6, 6]:
                     a = 1
                 if sub_q_last is None:
@@ -75,39 +67,29 @@ class dRRTStar:
                         # sub_samples.append(get_subprob(self.roadmaps, self.subprob_id)[r].sub_sample_fn())
                         sub_samples = get_sub_samples(get_subprob(self.roadmaps, self.subprob_id)[r], sub_samples)
                     sub_q_near = get_sub_q_near(self.nodes, get_subprob(self.roadmaps, self.subprob_id), sub_samples, self.subprob_id)
-                    if use_temp_debug: print('sub_q_last is None')
                 else:
                     sub_samples = sub_goals
                     sub_q_near = sub_q_last
-                    if use_temp_debug: print('sub_q_last is not None')
-                if use_temp_debug:
-                    print('sub_q_near', sub_q_near)
-                    print('sub_samples', sub_samples)
 
                 while True: # prevent q_new == sub_q_near for all robots (i.e. remains in the same composite node)
                     q_new = ()
                     for r in range(self.num_robots):
                         if sub_samples[r] == sub_goals[r]:
-                            if use_temp_debug: print('min heuristic: robot ', r)
                             temp_q_new = get_min_heuristic_vertex(get_subprob(self.roadmaps, self.subprob_id)[r],
                                                               sub_q_near[r], get_subprob(self.heuristic_vals, self.subprob_id)[r])
                         else:
-                            if use_temp_debug: print('random neighbor: robot ', r)
                             temp_q_new = get_random_neighbor_vertex(get_subprob(self.roadmaps, self.subprob_id)[r], sub_q_near[r])
                         q_new += apply_order_constraints(temp_q_new, sub_q_near[r], r, self.order_constraints[r],
                                                          get_sub_q_list(get_substarts_subgoals(self.goals, self.subprob_id, self.joint_dim), self.num_robots),
                                                          self.subprob_id)
                     if get_sub_q_list(q_new, self.num_robots) == sub_q_near:
-                        if use_temp_debug: print('q_new is the same as sub_q_near')
+                        if use_debug_verbal: print('q_new is the same as sub_q_near')
                     else:
                         break
-                    if use_temp_debug: print('q_new', get_sub_q_list(q_new, self.num_robots))
 
                 neighbor_nodes = get_neighbor_vertices(self.nodes, get_subprob(self.roadmaps, self.subprob_id), q_new, self.subprob_id)
-                if use_temp_debug: print('neighbor_nodes', neighbor_nodes)
                 q_best, local_dist, local_paths = get_q_best(self.nodes, get_subprob(self.roadmaps, self.subprob_id), self.num_robots,
                                                              self.inter_robots_collision_fn, neighbor_nodes, q_new, self.subprob_id)
-                if use_temp_debug: print('q_best', q_best)
                 if not q_best:
                     if use_debug_verbal: print('q_best is empty.')
                     sub_q_last = None
@@ -121,16 +103,12 @@ class dRRTStar:
 
                 is_update_subprob_id = False
                 if not is_duplicate(self.nodes, q_new, self.subprob_id):
-                    if use_temp_debug: print('q_new is not duplicate')
                     subprob_id = copy.deepcopy(self.subprob_id)
                     if is_q_new_in_subgoal(get_subprob(self.roadmaps, self.subprob_id), q_new,
                                            get_substarts_subgoals(self.goals, self.subprob_id, self.joint_dim)):
-                        if use_temp_debug: print('q_new in subgoal; subgoas', get_substarts_subgoals(self.goals, self.subprob_id, self.joint_dim))
                         if use_debug_verbal: print('Some of robots reached their subgoals.')
                         sub_q_last, sub_goals = update_subprob_id(q_new, sub_goals, self.subprob_id,
                                                                   self.goals, self.joint_dim, self.roadmaps)
-                        # print('subprob_id', self.subprob_id)
-                        # print(self.subprob_id, len(self.nodes), time.time() - start)
                         start = time.time()
                         is_update_subprob_id = True
 
@@ -169,7 +147,6 @@ class dRRTStar:
                 #             rewire(self.nodes, get_subprob(self.roadmaps, self.subprob_id), self.num_robots, q_new, n)
 
                 if not is_update_subprob_id:
-                    if use_temp_debug: print('subprob_id is not updated')
                     if get_heuristic_val(get_subprob(self.roadmaps, self.subprob_id), q_new,
                                          get_subprob(self.heuristic_vals, self.subprob_id)) < \
                             get_heuristic_val(get_subprob(self.roadmaps, self.subprob_id), q_best,
@@ -177,17 +154,12 @@ class dRRTStar:
                         sub_q_last = get_sub_q_list(q_new, self.num_robots)
                     else:
                         sub_q_last = None
-                    if use_temp_debug: print('sub_q_last', sub_q_last)
                 if time.time() - start_time > time_limit: break
 
             # Connect to target
-            if use_temp_debug: print(' ')
             if use_debug_verbal: print('Trying to connect to the target goal. ')
             sub_goals = get_sub_q_list(get_substarts_subgoals(self.goals, self.subprob_id, self.joint_dim), self.num_robots)
             sub_q_near = get_sub_q_near(self.nodes, get_subprob(self.roadmaps, self.subprob_id), sub_goals, self.subprob_id)
-            if use_temp_debug:
-                print('sub_goals', sub_goals)
-                print('sub_q_near', sub_q_near)
             if sub_q_near == sub_goals:
                 if use_debug_verbal: print('Goal has already reached.')
             else:
@@ -209,7 +181,6 @@ class dRRTStar:
                                                           self.nodes[parent_node_index].config,
                                                           get_substarts_subgoals(self.goals, self.subprob_id, self.joint_dim))
                         node_pose = get_substarts_subgoals(self.goals, self.subprob_id, self.joint_dim)
-                        if use_temp_debug: print('node_pose', node_pose)
                         sub_q_last, sub_goals = update_subprob_id(get_substarts_subgoals(self.goals, self.subprob_id, self.joint_dim),
                                                                   sub_goals, self.subprob_id, self.goals, self.joint_dim, self.roadmaps)
                         # print('subprob_id', self.subprob_id)
@@ -217,7 +188,6 @@ class dRRTStar:
                                                       parent=self.nodes[parent_node_index],
                                                       subprob_id=self.subprob_id, path=local_paths,
                                                       attachments=get_subattachments(self.roadmaps, self.subprob_id, self.nodes)))
-                        if use_temp_debug: print(self.subprob_id, len(self.nodes), time.time() - start)
 
                         # TODO: currently best path can be computed only when the final goals are reached. we do not consider optimality yet.
                         if is_goal_in_tree(self.nodes, get_goals(self.goals, self.joint_dim), self.roadmaps, self.subprob_id):
@@ -228,14 +198,14 @@ class dRRTStar:
                             is_found_path = True
                         # best_paths, best_path_cost = self.update_best_path(best_paths, best_path_cost)
                 else:
-                    print('order constraints are violated so skip connect_to_target')
+                    # if the algorithm gets stuck with this message, that highly implies that the roadmap size is insufficient, so feasible solution may not exist at all
+                    if use_debug_verbal: print('order constraints are violated so skip connect_to_target')
             if time.time() - start_time > time_limit:
                 if use_debug_verbal: print('Time out.')
                 break
 
         if best_paths: print('dRRT* is solved successfully.')
         else: SystemExit('TIMEOUT: dRRT* is NOT solved.')
-        if use_temp_debug: print('Spent %.2fs for dRRT*.' % (time.time()-start_time))
         return get_node_from_tree(self.nodes, get_substarts_subgoals(self.goals, self.subprob_id, self.joint_dim), self.subprob_id).retrace()
 
     def update_best_path(self, best_paths, best_path_cost):
