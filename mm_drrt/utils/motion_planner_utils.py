@@ -2,8 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from itertools import islice
 import random
+from random import choice
 import math
 import copy
+import time
 
 from external.pybullet_planning.pybullet_tools.ikfast.pr2.ik import is_ik_compiled, pr2_inverse_kinematics
 from external.pybullet_planning.pybullet_tools.pr2_utils import get_gripper_link, get_arm_joints, arm_conf, open_arm, \
@@ -19,8 +21,10 @@ from external.pybullet_planning.pybullet_tools.utils import is_placement, multip
     is_pose_close, elapsed_time, irange, create_sub_robot, get_custom_limits, sub_inverse_kinematics, INF, \
     get_box_geometry, create_shape, create_body, sample_placement, get_pose, get_euler, STATIC_MASS, RED, BROWN, \
     join_paths, get_parent_dir, get_extend_fn, get_collision_fn, unit_quat, get_unit_vector, MAX_DISTANCE, \
-    get_moving_links, can_collide, CollisionPair, parse_body, cached_fn, get_buffered_aabb, set_joint_positions, \
-    aabb_overlap, product
+    remove_redundant, all_close
+from external.pybullet_planning.motion.motion_planners.primitives import distance_fn_from_extend_fn
+from external.pybullet_planning.motion.motion_planners.utils import get_pairs, default_selector, get_distance, \
+    is_path, flatten
 
 from mm_drrt.planner.prm import prm
 
@@ -709,6 +713,204 @@ def update_subprob_id(sub_q, sub_goals, subprob_id, goals, joint_dim, roadmaps):
     return sub_q_last, sub_goals
 
 
+##### path smoothing
+
+def get_smoothing_fn(robot, joints, obstacles=[], attachments=[],
+                          self_collisions=True, disabled_collisions=set(),
+                          weights=None, resolutions=None, max_distance=MAX_DISTANCE,
+                          use_aabb=False, cache=True, custom_limits={}):
+    if (weights is None) and (resolutions is not None):
+        weights = np.reciprocal(resolutions)
+    sub_sample_fn = get_sample_fn(robot, joints, custom_limits=custom_limits)
+    sub_distance_fn = get_distance_fn(robot, joints, weights=weights)
+    sub_extend_fn = get_extend_fn(robot, joints, resolutions=resolutions)
+    sub_collision_fn = get_collision_fn(robot, joints, obstacles, attachments, self_collisions, disabled_collisions,
+                                        custom_limits=custom_limits, max_distance=max_distance,
+                                        use_aabb=use_aabb, cache=cache)
+    return sub_sample_fn, sub_distance_fn, sub_extend_fn, sub_collision_fn
+
+
+def smooth_path(path, robots, sub_extend_fns, sub_collision_fns, sub_distance_fns=None, cost_fn=None, sub_sample_fns=None,
+                max_iterations=50, max_time=INF, converge_time=INF, verbose=False):
+    """
+    :param distance_fn: Distance function - distance_fn(q1, q2)->float
+    :param extend_fn: Extension function - extend_fn(q1, q2)->[q', ..., q"]
+    :param collision_fn: Collision function - collision_fn(q)->bool
+    :param max_iterations: Maximum number of iterations - int
+    :param max_time: Maximum runtime - float
+    :return: Path [q', ..., q"] or None if unable to find a solution
+    """
+    # TODO: makes an assumption on extend_fn (to avoid sampling the same segment)
+    # TODO: smooth until convergence
+    # TODO: dynamic expansion of the nearby graph
+    start_time = last_time = time.time()
+    if (path is None) or (max_iterations is None):
+        return path
+    assert (max_iterations < INF) or (max_time < INF)
+    if cost_fn is None:
+        sub_cost_fns = sub_distance_fns
+    # TODO: use extend_fn to extract waypoints
+    waypoints, waypoints_paths = waypoints_from_path(path, difference_fn=None) # TODO: difference_fn
+    cost = compute_path_cost(waypoints, sub_cost_fns=sub_cost_fns)
+    len_q_each = int(len(path[0]) / len(sub_cost_fns))
+    #paths = [extend_fn(*pair) for pair in get_pairs(waypoints)] # TODO: update incrementally
+    #costs = [cost_fn(*pair) for pair in get_pairs(waypoints)]
+    for iteration in irange(max_iterations):
+        if (elapsed_time(start_time) > max_time) or (elapsed_time(last_time) > converge_time) or (len(waypoints) <= 2):
+            break
+
+        segments = get_pairs(range(len(waypoints)))
+        weights = [sum(sub_distance_fns[r](waypoints[i][len_q_each * r : len_q_each * (r + 1)],
+                                       waypoints[j][len_q_each * r : len_q_each * (r + 1)])
+                   for r in range(len(sub_distance_fns))) for i, j in segments]
+        # paths = get_extend_path(sub_extend_fns, waypoints)
+        #weights = [len(paths[i]) for i, j in segments]
+        probabilities = np.array(weights) / sum(weights)
+        if verbose:
+            print('Iteration: {} | Waypoints: {} | Cost: {:.3f} | Elapsed: {:.3f} | Remaining: {:.3f}'.format(
+                iteration, len(waypoints), cost, elapsed_time(start_time), max_time-elapsed_time(start_time)))
+
+        #segment1, segment2 = choices(segments, weights=probabilities, k=2)
+        seg_indices = list(range(len(segments)))
+        seg_idx1, seg_idx2 = np.random.choice(seg_indices, size=2, replace=True, p=probabilities)
+        if seg_idx1 == seg_idx2: # TODO: ensure not too far away
+            continue
+        if seg_idx2 < seg_idx1: # choices samples with replacement
+            seg_idx1, seg_idx2 = seg_idx2, seg_idx1
+        segment1, segment2 = segments[seg_idx1], segments[seg_idx2]
+        # TODO: option to sample_fn only adjacent pairs
+        #point1, point2 = [convex_combination(waypoints[i], waypoints[j], w=random())
+        #                  for i, j in [segment1, segment2]]
+        # point1, point2 = [waypoints_paths[i] for i, j in [segment1, segment2]]
+
+        i, _ = segment1
+        _, j = segment2
+        point1, point2 = waypoints[i], waypoints[j]
+        shortcut = [point1, point2]
+        # if sample_fn is not None:
+        #     shortcut = [point1, sample_fn(), point2]
+        #shortcut_paths = [extend_fn(*pair) for pair in get_pairs(waypoints)]
+        # new_waypoints = waypoints[:i+1] + shortcut + waypoints[j:] # TODO: reuse computation
+        new_waypoints = waypoints[:i] + shortcut + waypoints[j + 1:]
+        new_cost = compute_path_cost(new_waypoints, sub_cost_fns=sub_cost_fns)
+        if new_cost >= cost: # TODO: cost must have percent improvement above a threshold
+            continue
+        if not any(smooth_collision_check(q, robots, sub_collision_fns) for q in default_selector(refine_waypoints(shortcut, sub_extend_fns))):
+            waypoints = new_waypoints
+            is_init_q_removed = False
+            if i == 0:
+                is_init_q_removed = True
+            del waypoints_paths[i : j]
+            if not is_init_q_removed:
+                waypoints_paths.insert(i, refine_waypoints(shortcut, sub_extend_fns))
+            else:
+                waypoints_paths.insert(i, [shortcut[0]] + refine_waypoints(shortcut, sub_extend_fns))
+            cost = new_cost
+            last_time = time.time()
+    #return waypoints
+    refined_waypoints = []
+    for waypoints_path in waypoints_paths:
+        refined_waypoints += waypoints_path
+    return refined_waypoints
+
+
+def waypoints_from_path(path, difference_fn=None, tolerance=1e-3):
+    if difference_fn is None:
+        difference_fn = lambda q2, q1: np.array(q2) - np.array(q1) # get_difference
+        #difference_fn = get_difference_fn(body, joints) # TODO: account for wrap around or use adjust_path
+    path = remove_redundant(path, tolerance=tolerance)
+    if len(path) < 2:
+        return path
+
+    waypoints = [path[0]]
+    last_conf = path[1]
+    last_difference = get_unit_vector(difference_fn(last_conf, waypoints[-1]))
+    waypoints_paths = []
+    waypoints_path = [path[0], path[1]]
+    for conf in path[2:]:
+        difference = get_unit_vector(difference_fn(conf, waypoints[-1]))
+        if not all_close(last_difference, difference, atol=tolerance):
+            waypoints.append(last_conf)
+            difference = get_unit_vector(difference_fn(conf, waypoints[-1]))
+            waypoints_paths.append(waypoints_path)
+            waypoints_path = []
+        last_conf = conf
+        last_difference = difference
+        waypoints_path.append(conf)
+    waypoints.append(last_conf)
+    waypoints_paths.append(waypoints_path)
+    return waypoints, waypoints_paths
+
+
+def compute_path_cost(path, sub_cost_fns=get_distance):
+    if not is_path(path):
+        return INF
+    #path = waypoints_from_path(path)
+    len_q_each = int(len(path[0]) / len(sub_cost_fns))
+    cost_sum = 0
+    for r in range(len(sub_cost_fns)):
+        sub_path = [p[len_q_each * r : len_q_each * (r + 1)] for p in path]
+        cost_sum += sum(sub_cost_fns[r](*pair) for pair in get_pairs(sub_path))
+    return cost_sum
+
+
+def get_extend_path(sub_extend_fns, waypoints):
+    len_q_each = int(len(waypoints[0]) / len(sub_extend_fns))
+    sub_waypoints, sub_pairs = [], []
+    for r in range(len(sub_extend_fns)):
+        sub_waypoints.append([p[len_q_each * r : len_q_each * (r + 1)] for p in waypoints])
+        sub_pairs.append(get_pairs(sub_waypoints[r]))
+    paths = []
+    for i in range(len(sub_pairs[0])):
+        sub_paths = []
+        for r in range(len(sub_extend_fns)):
+            sub_paths.append(list(sub_extend_fns[r](*sub_pairs[r][i])))
+        merged_sub_paths = []
+        for j in range(get_max_length_list(sub_paths)):
+            q = ()
+            for r in range(len(sub_extend_fns)):
+                if len(sub_paths[r]) <= j:
+                    q += sub_paths[r][len(sub_paths[r]) - 1]
+                else:
+                    q += sub_paths[r][j]
+            merged_sub_paths.append(q)
+        paths.append(merged_sub_paths)
+    return paths
+
+
+def refine_waypoints(waypoints, sub_extend_fns):
+    #if len(waypoints) <= 1:
+    #    return waypoints
+    len_q_each = int(len(waypoints[0]) / len(sub_extend_fns))
+    sub_waypoints, sub_paths = [], []
+    for r in range(len(sub_extend_fns)):
+        sub_waypoints.append([p[len_q_each * r: len_q_each * (r + 1)] for p in waypoints])
+        sub_paths.append(list(flatten(sub_extend_fns[r](q1, q2) for q1, q2 in get_pairs(sub_waypoints[r]))))
+
+    merged_sub_paths = []
+    for j in range(get_max_length_list(sub_paths)):
+        q = ()
+        for r in range(len(sub_extend_fns)):
+            if len(sub_paths[r]) <= j:
+                q += sub_paths[r][len(sub_paths[r]) - 1]
+            else:
+                q += sub_paths[r][j]
+        merged_sub_paths.append(q)
+    return merged_sub_paths
+
+
+def smooth_collision_check(q, robots, sub_collision_fns):
+    len_q_each = int(len(q) / len(sub_collision_fns))
+    for r in range(len(sub_collision_fns)):
+        if sub_collision_fns[r](q[len_q_each * r : len_q_each * (r + 1)]):
+            return True
+    for r in range(len(sub_collision_fns) - 1):
+        for r_prime in range(r + 1, len(sub_collision_fns)):
+            if pairwise_collision(robots[r], robots[r_prime]):
+                return True
+    return False
+
+
 ##### dRRT*
 
 class OptimalNode(object):
@@ -945,13 +1147,13 @@ def get_subprob(array, subprob_id):
 def get_subattachments(array, subprob_id, nodes):
     # remember that the local path is the path reaching to the current node, so attachment must use the previous node information
     sub_array = [None for _ in range(len(array))]
-    for i in range(len(array)):
-        if nodes[-1].subprob_id[i] == subprob_id[i]:
-            if array[i][subprob_id[i]].attachments:
-                sub_array[i] = array[i][subprob_id[i]].attachments
+    for r in range(len(array)):
+        if nodes[-1].subprob_id[r] == subprob_id[r]:
+            if array[r][subprob_id[r]].attachments:
+                sub_array[r] = array[r][subprob_id[r]].attachments[0]
         else:
-            if nodes[-1].attachments[i]:
-                sub_array[i] = nodes[-1].attachments[i]
+            if array[r][subprob_id[r] - 1].attachments:
+                sub_array[r] = array[r][subprob_id[r] - 1].attachments[0]
     return sub_array
 
 

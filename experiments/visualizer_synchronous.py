@@ -27,14 +27,10 @@ path = join_paths(get_parent_dir(__file__), os.pardir, '.')
 dbfile = open(path+'/experiments/'+fopt.load_file, 'rb')
 db = pickle.load(dbfile)
 
-if not 'smooth' in fopt.load_file:
-    composite_path = db['composite_path']
-else:
-    smoothed_paths = db['smoothed_paths']
-    attachments = db['attachments']
+composite_path = db['composite_path']
 opt = db['opt']
 
-sim_id = connect(use_gui=True)
+sim_id = connect(use_gui=False)
 disable_real_time()
 if fopt.env_type == 'pickplace':
     set_camera_pose(camera_point=PickPlaceCameraSetup[0], target_point=PickPlaceCameraSetup[1])
@@ -49,33 +45,32 @@ elif fopt.env_type == 'cleaning':
     env = ObjectCleaningEnvironment(num_robots=opt.num_robots, num_objs=opt.num_objs, arm=opt.arm,
                                     grasp_type=opt.grasp_type, sim_id=sim_id, seed=opt.seed)
 
-# video_saver = VideoSaver('mrtamp_video.mp4')
+# analyze each robot's motion path lengths
+each_nsteps = [[0 for _ in range(composite_path[-1].subprob_id[r] + 1)] for r in range(opt.num_robots)]
+cur_subprob_id = [0 for _ in range(opt.num_robots)]
+for i in range(len(composite_path)):
+    for r in range(opt.num_robots):
+        if cur_subprob_id[r] != composite_path[i].subprob_id[r]:
+            cur_subprob_id[r] = composite_path[i].subprob_id[r]
+        if composite_path[i].sub_local_paths:
+            each_nsteps[r][composite_path[i].subprob_id[r]] += len(composite_path[i].sub_local_paths[r])
 
-if not 'smooth' in fopt.load_file:
-    for i in range(len(composite_path)):
-        for j in range(get_max_length_list(composite_path[i].sub_local_paths)):
-            for r in range(opt.num_robots):
-                joints = [joint_from_name(env.robots[r], name) for name in PR2_GROUPS['base']] + \
-                         [joint_from_name(env.robots[r], name) for name in PR2_GROUPS['left_arm']]
-                if len(composite_path[i].sub_local_paths[r]) <= j:
-                    set_joint_positions(env.robots[r], joints, composite_path[i].sub_local_paths[r][len(composite_path[i].sub_local_paths[r])-1])
-                else:
-                    set_joint_positions(env.robots[r], joints, composite_path[i].sub_local_paths[r][j])
-                if composite_path[i].attachments[r]:
-                    composite_path[i].attachments[r].assign()
-            wait_for_duration(0.01)
-else:
-    len_q_each = int(len(smoothed_paths[0][0]) / opt.num_robots)
-    for i, smoothed_path in enumerate(smoothed_paths):
-        cur_attachments = attachments[i]
-        for i in range(len(smoothed_path)):
-            for r in range(opt.num_robots):
-                joints = [joint_from_name(env.robots[r], name) for name in PR2_GROUPS['base']] + \
-                         [joint_from_name(env.robots[r], name) for name in PR2_GROUPS['left_arm']]
-                set_joint_positions(env.robots[r], joints, smoothed_path[i][len_q_each * r : len_q_each * (r + 1)])
-                if cur_attachments[r]:
-                    cur_attachments[r].assign()
-            wait_for_duration(0.01)
+# video_saver = VideoSaver('video.mp4')
+
+total_nsteps = 0
+for i in range(len(composite_path)):
+    for j in range(get_max_length_list(composite_path[i].sub_local_paths)):
+        for r in range(opt.num_robots):
+            joints = [joint_from_name(env.robots[r], name) for name in PR2_GROUPS['base']] + \
+                     [joint_from_name(env.robots[r], name) for name in PR2_GROUPS['left_arm']]
+            if len(composite_path[i].sub_local_paths[r]) <= j:
+                set_joint_positions(env.robots[r], joints, composite_path[i].sub_local_paths[r][len(composite_path[i].sub_local_paths[r])-1])
+            else:
+                set_joint_positions(env.robots[r], joints, composite_path[i].sub_local_paths[r][j])
+            if composite_path[i].attachments[r]:
+                composite_path[i].attachments[r].assign()
+        # wait_for_duration(0.01)
+        total_nsteps += 1
 
 # video_saver.restore()
 dbfile.close()

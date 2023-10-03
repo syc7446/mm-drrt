@@ -315,6 +315,15 @@ class ObjectCleaningEnvironment(Environment):
         plane = create_floor()
         room = load_pybullet(TWO_ROOMS_CONNECTED)
         self.custom_limits = {}
+        wall = []
+        wall.append(create_box(0.2, 3.0, 1.0, color=TRANSPARENT))
+        set_point(wall[-1], (-3.0, 1.5, 0))
+        wall.append(create_box(6.0, 0.2, 1.0, color=TRANSPARENT))
+        set_point(wall[-1], (0.0, -3.0, 0))
+        wall.append(create_box(0.2, 1.0, 1.0, color=TRANSPARENT))
+        set_point(wall[-1], (-3.0, -3.5, 0))
+        wall.append(create_box(3.0, 0.2, 1.0, color=TRANSPARENT))
+        set_point(wall[-1], (-4.5, 0.0, 0))
 
         table = []
         table.append(create_box(0.4, 0.4, 1.2, color=WHITE))
@@ -327,7 +336,7 @@ class ObjectCleaningEnvironment(Environment):
         set_point(table[3], (0, 2.0, 0))
         cabinet = create_shelf(w=1.0, l=0.2, h=SHELF_HEIGHT,
                                   set_point=(0, 1.9, 0.6265), sim_id=self._sim_id)
-        self.fixed_obstacles = [cabinet] + table
+        self.fixed_obstacles = [cabinet] + table + wall
 
         shelf_placement_0 = create_shelf_placement(w=0.2, l=0.2, h=0.01, color=WHITE)
         set_point(shelf_placement_0, (-2.7, -1.5, 0.6))
@@ -388,8 +397,8 @@ class ObjectCleaningEnvironment(Environment):
             close_arm(self.robots[i], other_arm)
 
         # comment out for visualization
-        for robot in self.robots.values():
-            self._grippers[robot] = get_gripper(robot)
+        # for robot in self.robots.values():
+        #     self._grippers[robot] = get_gripper(robot)
 
         self.m_objs = boxes
         self.f_objs = [table[0], table[1], shelf_placement_0, shelf_placement_1, shelf_placement_2, shelf_placement_3,

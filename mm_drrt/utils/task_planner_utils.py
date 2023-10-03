@@ -167,7 +167,7 @@ def initialize_actions(plan, env, actions, init_order_constraints, f_objs, num_s
                     f_objs[to_f_obj] = Fixedobj(env, to_f_obj, set(), num_samples)
             if type == 'transit':
                 f_objs[to_f_obj].add_action(actions[a[0]], 'grasp')
-            else:  # type == 'transfer'
+            elif type == 'transfer':
                 f_objs[to_f_obj].add_action(actions[a[0]], 'add')
 
 
@@ -184,7 +184,7 @@ def subgoal_refinement(robot_plans, env, obj_orders, actions, use_debug=False):
     init_world = env.save_world()
     for robot in robot_plans:
         for id, action in enumerate(robot_plans[robot]):
-            if id % 2 == 1: # place actions
+            if action.type == 'transfer': # place actions
                 if not env.subgoal_sampling(robot, obj_orders[robot_plans[robot][id].m_obj], actions,
                                             robot_plans[robot][id], robot_plans[robot][id].m_obj,
                                             robot_plans[robot][id].obstacles['start'], robot_plans[robot][id].obstacles['goal'],

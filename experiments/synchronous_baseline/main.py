@@ -7,7 +7,7 @@ from external.pybullet_planning.pybullet_tools.utils import connect, disconnect,
 from examples.envs.pick_place_env import PickPlaceEnvironment, PickPlaceCameraSetup
 from examples.envs.object_handover_env import ObjectHandoverEnvironment, ObjectHandoverCameraSetup
 from examples.envs.object_cleaning_env import ObjectCleaningEnvironment, ObjectCleaningCameraSetup
-from mm_drrt.planner.task_planner import PlanSkeleton
+from experiments.synchronous_baseline.task_planner import PlanSkeleton
 from experiments.data_saver import data_saver
 
 parser = argparse.ArgumentParser()
@@ -15,8 +15,8 @@ parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--num_robots', type=int, default=3)
 parser.add_argument('--num_objs', type=int, default=4)
 parser.add_argument('--num_placement_samples', type=int, default=30)
-parser.add_argument('--num_base_samples', type=int, default=50)
-parser.add_argument('--num_arm_samples', type=int, default=20)
+parser.add_argument('--num_base_samples', type=int, default=25)
+parser.add_argument('--num_arm_samples', type=int, default=15)
 parser.add_argument('--arm', type=str, default='left')
 parser.add_argument('--grasp_type', type=str, default='side')
 parser.add_argument('--env_type', type=str, default='cleaning')    # options: pickplace, handover, cleaning
@@ -51,7 +51,7 @@ plan, action_orders, obj_orders, init_order_constraints = env.create_plan_order_
 
 assert opt.num_robots == len(action_orders), "Error: num_robots is not properly set"
 ps = PlanSkeleton(env, plan, obj_orders, init_order_constraints, opt.num_placement_samples, opt.use_debug)
-composite_path = ps.plan_refinement(opt.num_base_samples, opt.num_arm_samples, opt.drrt_num_iters, opt.drrt_time_limit)
+paths, attachments = ps.plan_refinement(opt.num_base_samples, opt.num_arm_samples, opt.drrt_num_iters, opt.drrt_time_limit)
 # data_saver(composite_path, opt)
 
 disconnect()
