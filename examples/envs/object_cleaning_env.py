@@ -397,8 +397,8 @@ class ObjectCleaningEnvironment(Environment):
             close_arm(self.robots[i], other_arm)
 
         # comment out for visualization
-        # for robot in self.robots.values():
-        #     self._grippers[robot] = get_gripper(robot)
+        for robot in self.robots.values():
+            self._grippers[robot] = get_gripper(robot)
 
         self.m_objs = boxes
         self.f_objs = [table[0], table[1], shelf_placement_0, shelf_placement_1, shelf_placement_2, shelf_placement_3,
