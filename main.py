@@ -20,7 +20,7 @@ parser.add_argument('--num_arm_samples', type=int, default=20)
 parser.add_argument('--arm', type=str, default='left')
 parser.add_argument('--grasp_type', type=str, default='side')
 parser.add_argument('--env_type', type=str, default='cleaning')    # options: pickplace, handover, cleaning
-parser.add_argument('--use_gui', action='store_true')
+parser.add_argument('--use_gui', action='store_false')
 parser.add_argument('--use_debug', action='store_true')
 # dRRT params
 parser.add_argument('--drrt_num_iters', type=int, default=10)
