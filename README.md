@@ -1,10 +1,11 @@
-# mm-drrt
+# MM-dRRT
 
 ## Installation
 ```
 git clone --recursive https://github.com/syc7446/mm-drrt.git
 cd mm-drrt/
 pip install -r requirements.txt
+python -m main
 ```
 
 ## Inputs and Parameters
@@ -23,3 +24,11 @@ All the relevant files are included in the `/examples/envs/` folder. Find the `c
 - **num_arm_samples**: This parameter is equivalent to **num_base_samples** but for arm motions.
 - **env_type**: This parameter determines which example to run.
 - **use_gui**: This parameter determines whether to use a GUI for visualization.
+
+## Examples
+We provide two example codes to facilitate understanding of how MM-dRRT works. The first example involves a single robot picking up an object from one table and placing it on another. The second example involves two robots moving two objects located on two tables.
+
+- Single robot, single object: Set both `num_robots` and `num_objs` to 1. Set `env_type` to `exp_single_robot`. 
+- Two robots, two objects: Set both `num_robots` and `num_objs` to 2. Set `env_type` to `exp_two_robots`. 
+
+In both examples, focus on the `_create_problem` function in `example_single_robot_env` and `example_two_robots_env` files located in the `/examples/envs/` folder to understand how the environments are specified.
