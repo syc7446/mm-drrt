@@ -401,7 +401,7 @@ def add_order_constraints(collision, collision_type, obj_orders, add_actions, re
             add_action = action[0]
             break
     add_actions[add_action].order_constraints['pre'].append(remove_actions[remove_action])
-    remove_actions[remove_action].order_constraints['next'].append(add_actions[add_action])
+    remove_actions[remove_action].order_constraints['post'].append(add_actions[add_action])
 
 
 def set_obstacles(add_actions, remove_actions, check_indices, env, obj_orders, collisions, init_collisions,
