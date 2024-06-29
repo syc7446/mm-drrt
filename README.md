@@ -1,5 +1,11 @@
 # MM-dRRT
 
+This repository is designed for MM-dRRT, a multi-robot task and motion planning algorithm implemented in the PyBullet simulator. Please refer to the following paper for more details, and consider citing this work if you find this repository useful.
+```
+Yoonchang Sung, Rahul Shome, and Peter Stone. "Asynchronous Task Plan Refinement for Multi-Robot Task and Motion Planning." In 2024 IEEE International Conference on Robotics and Automation (ICRA), IEEE, 2024.
+```
+
+
 ## Installation
 ```
 git clone --recursive https://github.com/syc7446/mm-drrt.git
